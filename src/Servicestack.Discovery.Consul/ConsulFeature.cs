@@ -3,69 +3,69 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 namespace ServiceStack.Discovery.Consul
 {
-    using System;
-    using Funq;
+	using System;
+	using Funq;
 
-    using ServiceStack;
-    using ServiceStack.Web;
+	using ServiceStack;
+	using ServiceStack.Web;
 
-    /// <summary>
-    /// Enables remote service calls by dynamically looking up remote service url
-    /// </summary>
-    public class ConsulFeature : IPlugin
-    {
-        private IServiceDiscovery<ConsulService, ServiceRegistration> ServiceDiscovery { get; set; }
+	/// <summary>
+	/// Enables remote service calls by dynamically looking up remote service url
+	/// </summary>
+	public class ConsulFeature : IPlugin
+	{
+		private IServiceDiscovery<ConsulService, ServiceRegistration> ServiceDiscovery { get; set; }
 
-        public ConsulFeatureSettings Settings { get; }
+		public ConsulFeatureSettings Settings { get; }
 
-        /// <summary>
-        /// Enables service discovery using consul to resolve the correct url for a remote RequestDTO
-        /// </summary>
-        public ConsulFeature(ConsulSettings settings = null)
-        {
-            Settings = new ConsulFeatureSettings();
-            settings?.Invoke(Settings);
-        }
-        
-        public void Register(IAppHost appHost)
-        {
-            // HACK: not great but unsure how to improve
-            // throws exception if WebHostUrl isn't set as this is how we get endpoint url:port
-            if (appHost.Config?.WebHostUrl == null)
-                throw new ApplicationException("appHost.Config.WebHostUrl must be set to use the Consul plugin, this is so consul will know the full external http://url:port for the service");
+		/// <summary>
+		/// Enables service discovery using consul to resolve the correct url for a remote RequestDTO
+		/// </summary>
+		public ConsulFeature(ConsulSettings settings = null)
+		{
+			Settings = new ConsulFeatureSettings();
+			settings?.Invoke(Settings);
+		}
 
-            // register callbacks
-            appHost.AfterInitCallbacks.Add(RegisterService);
-            appHost.OnDisposeCallbacks.Add(UnRegisterService);
+		public void Register(IAppHost appHost)
+		{
+			// HACK: not great but unsure how to improve
+			// throws exception if WebHostUrl isn't set as this is how we get endpoint url:port
+			if (appHost.Config?.WebHostUrl == null)
+				throw new Exception("appHost.Config.WebHostUrl must be set to use the Consul plugin, this is so consul will know the full external http://url:port for the service");
 
-            appHost.RegisterService<HealthCheckService>();
-            appHost.RegisterService<DiscoveryService>();
+			// register callbacks
+			appHost.AfterInitCallbacks.Add(RegisterService);
+			appHost.OnDisposeCallbacks.Add(UnRegisterService);
 
-            // register plugin link
-            appHost.GetPlugin<MetadataFeature>()?.AddPluginLink(ConsulUris.LocalAgent.CombineWith("ui"), "Consul Agent WebUI");
-        }
+			appHost.RegisterService<HealthCheckService>();
+			appHost.RegisterService<DiscoveryService>();
 
-        private void RegisterService(IAppHost host)
-        {
-            ServiceDiscovery = Settings.GetDiscoveryClient() ?? new ConsulDiscovery();
-            ServiceDiscovery.Register(host);
+			// register plugin link
+			appHost.GetPlugin<MetadataFeature>()?.AddPluginLink(ConsulUris.LocalAgent.CombineWith("ui"), "Consul Agent WebUI");
+		}
 
-            // register servicestack discovery services
-            host.Register(ServiceDiscovery);
-            host.GetContainer()
-                .Register<IServiceGatewayFactory>(x => new ConsulServiceGatewayFactory(Settings.GetGateway(), ServiceDiscovery))
-                .ReusedWithin(ReuseScope.None);
-        }
+		private void RegisterService(IAppHost host)
+		{
+			ServiceDiscovery = Settings.GetDiscoveryClient() ?? new ConsulDiscovery();
+			ServiceDiscovery.Register(host);
 
-        private void UnRegisterService(IAppHost host = null)
-        {
-            ServiceDiscovery.Unregister(host);
-        }
-    }
+			// register servicestack discovery services
+			host.Register(ServiceDiscovery);
+			host.GetContainer()
+				.Register<IServiceGatewayFactory>(x => new ConsulServiceGatewayFactory(Settings.GetGateway(), ServiceDiscovery))
+				.ReusedWithin(ReuseScope.None);
+		}
 
-    public delegate HealthCheck HealthCheckDelegate(IAppHost appHost);
+		private void UnRegisterService(IAppHost host = null)
+		{
+			ServiceDiscovery.Unregister(host);
+		}
+	}
 
-    public delegate IServiceGateway DefaultGatewayDelegate(string baseUri);
+	public delegate HealthCheck HealthCheckDelegate(IAppHost appHost);
 
-    public delegate void ConsulSettings(ConsulFeatureSettings settings);
+	public delegate IServiceGateway DefaultGatewayDelegate(string baseUri);
+
+	public delegate void ConsulSettings(ConsulFeatureSettings settings);
 }
