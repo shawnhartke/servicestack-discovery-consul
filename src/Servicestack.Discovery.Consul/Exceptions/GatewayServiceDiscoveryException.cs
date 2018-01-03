@@ -3,17 +3,17 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 namespace ServiceStack.Discovery.Consul
 {
-    using System;
+	using System;
 
-    [Serializable]
-    public class GatewayServiceDiscoveryException : WebServiceException
-    {
-        public GatewayServiceDiscoveryException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
+	[Serializable]
+	public class GatewayServiceDiscoveryException : WebServiceException
+	{
+		public GatewayServiceDiscoveryException(string message, Exception innerException) : base(message, innerException)
+		{
+		}
 
-        public GatewayServiceDiscoveryException(string message) : base(message)
-        {
-        }
-    }
+		public GatewayServiceDiscoveryException(string message) : base(message)
+		{
+		}
+	}
 }

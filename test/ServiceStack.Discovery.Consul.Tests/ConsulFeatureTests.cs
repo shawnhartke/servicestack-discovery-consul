@@ -3,46 +3,43 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 namespace ServiceStack.Discovery.Consul.Tests
 {
-    using System;
+	using System;
+	using FluentAssertions;
+	using ServiceStack.Testing;
+	using Xunit;
 
-    using FluentAssertions;
+	[Collection("AppHost")]
+	public class ConsulFeatureTests
+	{
+		private readonly AppHostFixture fixture;
 
-    using ServiceStack.Testing;
+		public ConsulFeatureTests(AppHostFixture fixture)
+		{
+			this.fixture = fixture;
+		}
 
-    using Xunit;
+		[Fact]
+		public void Config_WebHostUrl_ThrowsException_IfNotSet()
+		{
+			Action action = () => new ConsulFeature().Register(new BasicAppHost());
 
-    [Collection("AppHost")]
-    public class ConsulFeatureTests 
-    {
-        private readonly AppHostFixture fixture;
+			action.ShouldThrow<ApplicationException>().Which.Message.Should().Be("appHost.Config.WebHostUrl must be set to use the Consul plugin, this is so consul will know the full external http://url:port for the service");
+		}
 
-        public ConsulFeatureTests(AppHostFixture fixture)
-        {
-            this.fixture = fixture;
-        }
+		[Fact]
+		public void ServiceChecks_Should_Be_Empty()
+		{
+			var plugin = new ConsulFeature();
 
-        [Fact]
-        public void Config_WebHostUrl_ThrowsException_IfNotSet()
-        {
-            Action action = () => new ConsulFeature().Register(new BasicAppHost());
+			plugin.Settings.GetServiceChecks().Should().BeEmpty();
+		}
 
-            action.ShouldThrow<ApplicationException>().Which.Message.Should().Be("appHost.Config.WebHostUrl must be set to use the Consul plugin, this is so consul will know the full external http://url:port for the service");
-        }
+		[Fact]
+		public void DiscoveryClient_Should_BeNull()
+		{
+			var plugin = new ConsulFeature();
 
-        [Fact]
-        public void ServiceChecks_Should_Be_Empty()
-        {
-            var plugin = new ConsulFeature();
-
-            plugin.Settings.GetServiceChecks().Should().BeEmpty();
-        }
-
-        [Fact]
-        public void DiscoveryClient_Should_BeNull()
-        {
-            var plugin = new ConsulFeature();
-
-            plugin.Settings.GetDiscoveryClient().Should().BeNull();
-        }
-    }
+			plugin.Settings.GetDiscoveryClient().Should().BeNull();
+		}
+	}
 }

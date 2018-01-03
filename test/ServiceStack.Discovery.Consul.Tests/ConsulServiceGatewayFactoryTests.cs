@@ -3,52 +3,50 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/. 
 namespace ServiceStack.Discovery.Consul.Tests
 {
-    using System;
-    using System.Collections.Generic;
+	using System;
+	using System.Collections.Generic;
+	using FluentAssertions;
+	using Xunit;
 
-    using FluentAssertions;
+	[Collection("AppHost")]
+	public class ConsulServiceGatewayFactoryTests
+	{
+		[Fact]
+		public void Ctor_Requires_DefaultGatewayDelegate()
+		{
+			Action action = () => new ConsulServiceGatewayFactory(null, new TestServiceDiscovery());
+			action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("defaultGateway");
+		}
 
-    using Xunit;
+		[Fact]
+		public void Ctor_Requires_DefaultDiscovery()
+		{
+			Action action = () => new ConsulServiceGatewayFactory(uri => new JsonServiceClient(uri), null);
+			action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("discoveryClient");
+		}
 
-    [Collection("AppHost")]
-    public class ConsulServiceGatewayFactoryTests
-    {
-        [Fact]
-        public void Ctor_Requires_DefaultGatewayDelegate()
-        {
-            Action action = () => new ConsulServiceGatewayFactory(null, new TestServiceDiscovery());
-            action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("defaultGateway");
-        }
+		[Fact]
+		public void Gateway_Ignores_LocalTypes()
+		{
+			var gateway = new ConsulServiceGatewayFactory(uri => new CsvServiceClient(uri), new TestServiceDiscovery());
+			gateway.LocalTypes.Add(typeof(ConsulServiceGatewayFactoryTests));
 
-        [Fact]
-        public void Ctor_Requires_DefaultDiscovery()
-        {
-            Action action = () => new ConsulServiceGatewayFactory(uri => new JsonServiceClient(uri), null);
-            action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("discoveryClient");
-        }
+			var serviceGateway = gateway.GetGateway(typeof(ConsulServiceGatewayFactoryTests));
 
-        [Fact]
-        public void Gateway_Ignores_LocalTypes()
-        {
-            var gateway = new ConsulServiceGatewayFactory(uri => new CsvServiceClient(uri), new TestServiceDiscovery());
-            gateway.LocalTypes.Add(typeof(ConsulServiceGatewayFactoryTests));
+			serviceGateway.Should().BeNull();
+		}
 
-            var serviceGateway = gateway.GetGateway(typeof(ConsulServiceGatewayFactoryTests));
+		[Fact]
+		public void Gateway_ReturnsCorrectly_ForNonLocalTypes()
+		{
+			var resolver = new TestServiceDiscovery(new KeyValuePair<Type, string>(typeof(ConsulServiceGatewayFactoryTests), "http://banana"));
+			var gateway = new ConsulServiceGatewayFactory(uri => new CsvServiceClient(uri) { Version = 123 }, resolver);
+			gateway.LocalTypes.Clear();
 
-            serviceGateway.Should().BeNull();
-        }
+			var serviceGateway = gateway.GetGateway(typeof(ConsulServiceGatewayFactoryTests));
 
-        [Fact]
-        public void Gateway_ReturnsCorrectly_ForNonLocalTypes()
-        {
-            var resolver = new TestServiceDiscovery(new KeyValuePair<Type, string>(typeof(ConsulServiceGatewayFactoryTests), "http://banana"));
-            var gateway = new ConsulServiceGatewayFactory(uri => new CsvServiceClient(uri) { Version = 123 }, resolver);
-            gateway.LocalTypes.Clear();
-
-            var serviceGateway = gateway.GetGateway(typeof(ConsulServiceGatewayFactoryTests));
-
-            var client = serviceGateway.Should().BeOfType<CachedServiceClient>().Subject;
-            client.Version.Should().Be(123);
-        }
-    }
+			var client = serviceGateway.Should().BeOfType<CachedServiceClient>().Subject;
+			client.Version.Should().Be(123);
+		}
+	}
 }
